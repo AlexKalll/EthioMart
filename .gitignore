@@ -1,0 +1,32 @@
+
+__pycache__/
+*.py[cod]
+*$py.class
+.cache
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# IDE specific files
+.vscode/
+
+# Data files
+data/raw/
+data/processed/
+# downloaded images
+photos/
+
+# Model files
+models/
+
+# Output files
+# outputs/
+
+# project structure creation file
+create_project_structure.py
