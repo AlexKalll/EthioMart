@@ -19,7 +19,8 @@ venv/
 # Data files
 data/raw/
 data/processed/
-# photos/
+# downloaded images
+photos/
 
 # Model files
 models/
