@@ -1,4 +1,5 @@
 # src/telegram_scraper.py
+
 import asyncio
 import csv
 from datetime import datetime
@@ -70,10 +71,9 @@ async def scrape_all_channels(client):
                             await client.download_media(message.media, file=full_image_path)
                             
                             # Calculate relative path from the perspective of data/raw/telegram_data.csv
-                            # If telegram_data.csv is in data/raw/, and images in photos/, 
-                            # then to reference 'photos/image.jpg' from data/raw/ we need '../photos/image.jpg'
+                            # If telegram_data.csv is in data/raw/, and images in photos/, then to reference 'photos/image.jpg' from data/raw/ we need 'EthioMart/photos/image.jpg'
                             # Path.relative_to provides this, but simpler to construct explicitly here
-                            image_relative_path = str(Path("../photos") / image_filename).replace("\\", "/") # Ensure Unix-like path separators
+                            image_relative_path = str(Path("EthioMart/photos") / image_filename).replace("\\", "/") # Ensure Unix-like path separators
                         
                         # Write row to CSV
                         writer.writerow([
