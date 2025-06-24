@@ -6,15 +6,15 @@ import re
 import logging
 import os
 import sys
-from emoji import demojize # For handling emojis
+# from emoji import demojize # No longer needed if not converting/demojizing
 from pathlib import Path # Ensure Path is imported for path operations
 
-# Ensure the src directory is in the Python path for imports
+# Ensure the src directory is in the Python path for imports (critical for modules)
 project_root = Path(__file__).resolve().parent.parent # Points to EthioMart/
 sys.path.insert(0, str(project_root)) # Insert at the beginning to prioritize
 
 # Import paths from your central config.py
-from config.config import DATA_DIR # Assuming DATA_DIR points to EthioMart/data/raw
+from config.config import DATA_DIR 
 
 # Configure logging for the preprocessor script
 logging.basicConfig(
@@ -26,6 +26,8 @@ def preprocess_amharic(text):
     """
     Applies a series of cleaning and normalization steps to Amharic text from Telegram posts.
     This function aims to make the text clean and consistent for Named Entity Recognition.
+    
+    This version keeps phone numbers, Telegram usernames, and EMOJIS/ICONS in the text for later labeling.
     """
     if not isinstance(text, str):
         # Ensure input is a string; return empty string for non-string inputs (like NaN)
@@ -34,37 +36,27 @@ def preprocess_amharic(text):
     # Step 1: Normalize common Amharic characters (optional but good practice)
     # This addresses slight Unicode variations or commonly interchanged characters.
     text = text.replace('ሃ', 'ሀ').replace('ሐ', 'ሀ').replace('ሓ', 'ሀ') # Normalizing 'Ha' sounds
-    text = text.replace('ሰ', 'ሠ') # Normalizing 'Se' and 'She'
     text = text.replace('ጸ', 'ፀ') # Normalizing 'Tse'
 
-    # Step 2: Remove all emojis and their text representations (e.g., :smile:)
-    text = demojize(text, delimiters=("", "")) # Convert to shortcodes, then remove
-    text = re.sub(r':[a-z_]+:', '', text) # Remove any remaining shortcodes
-    emoji_pattern = re.compile(
-        "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
-        "\U00002702-\U000027B0"
-        "\U000024C2-\U0001F251"
-        "]+", flags=re.UNICODE
-    )
-    text = emoji_pattern.sub(r'', text)
+    # Step 2: REMOVED ALL EMOJI CLEANING/DEMOJIZING as per user's request
+    # Emojis and icons will now remain in the text.
+    # The previous code lines that were removed:
+    # text = demojize(text, delimiters=("", ""))
+    # text = re.sub(r':[a-z_]+:', '', text)
+    # emoji_pattern = re.compile([...])
+    # text = emoji_pattern.sub(r'', text)
 
     # Step 3: Clean Telegram-specific decorative patterns and common symbols
+    # This list should primarily target non-emoji, non-alphanumeric decorative symbols
+    # that are not useful for NER and might clutter the text.
+    # Note: Some symbols like pushpin, mobile phone with arrow, etc., might still be Unicode emojis.
+    # If any specific Unicode *decorative* symbols (not emojis) are still converted to text or removed
+    # that you wish to keep, we can refine this list further.
     telegram_decorative_patterns = [
-        r'[\U00002600-\U000026FF]', # Miscellaneous Symbols (e.g., 📌📍)
-        r'[\U00002700-\U000027BF]', # Dingbats (e.g., ✅❌)
-        r'[\U00002B50]', # Star symbol
-        r'[\U00002B00-\U00002BFF]', # Arrow symbols (e.g., ⤵️🔽)
-        r'[👍⚡️⚠️🏢🔖💬]', # Common Telegram icons and hand gestures
-        r'[\u200b\u200c\u200d\u200e\u200f]', # Zero-width joiner, non-joiner, etc. (hidden characters)
-        r'[🔸♦️✨✔️🤍🔶⭐️🌟🔥💧]', # Other decorative symbols seen in samples
-        r'\[Image \d+\]', # Remove "[Image X]" if present (from PDF snippets)
+        # Removed patterns for what are typically emojis/icons if they are to be kept.
+        # Keeping patterns for general punctuation/structural elements that are less like emojis.
         r'[\.\s]{3,}', # Ellipsis or multiple dots with spaces (e.g., ... or . . .)
         r'\.{2,}', # Multiple dots (e.g., ..)
-        r'+',      # Replacement characters for unrenderable glyphs
         r'\*{2,}',  # Multiple asterisks (e.g., ***)
         r'_{2,}',   # Multiple underscores (e.g., ___)
         r'~{2,}',   # Multiple tildes (e.g., ~~~)
@@ -72,11 +64,13 @@ def preprocess_amharic(text):
         r'[\\\/]{2,}', # Multiple backslashes or forward slashes
         r'={2,}', # Multiple equals signs (e.g., ===)
         r'-{2,}', # Multiple hyphens/dashes (e.g., ---)
-        r'\+{2,}', # Multiple plus signs
-        r'#{2,}', # Multiple hash signs
+        r'\+{2,}', # Multiple plus signs (e.g., +++)
+        r'#{2,}', # Multiple hash signs (e.g., ###)
         r'%\s*%', # Common "percent" separator
         r'\|', # Single pipe character often used as separator
         r'[\[\]\(\)\{\}]', # Brackets, parentheses, curly braces
+        r'\[Image \d+\]', # Remove "[Image X]" if present (from PDF snippets)
+        r'\uFFFD' # Unicode replacement character (often appears for unrenderable glyphs)
     ]
     for pattern in telegram_decorative_patterns:
         text = re.sub(pattern, '', text)
@@ -84,25 +78,32 @@ def preprocess_amharic(text):
     # Step 4: Remove URLs (http/https and t.me links)
     text = re.sub(r'https?://\S+|www\.\S+|t\.me/\S+', '', text)
 
-    # Step 5: Remove Telegram user mentions (@username) and hashtags (#hashtag)
-    text = re.sub(r'@\w+', '', text) # Telegram mentions
-    text = re.sub(r'#\w+', '', text) # Hashtags
+    # Step 5: Remove Hashtags (Telegram user mentions are kept)
+    text = re.sub(r'#\w+', '', text) # Hashtags are still removed
 
     # Step 6: Standardize currency expressions
     text = re.sub(r'(\d[\d,]*)\s*(ብር|ETB|birr|Br|Birr)', r'\1 ETB', text, flags=re.IGNORECASE)
-    text = re.sub(r'[💲🏷💵]', '', text)
+    text = re.sub(r'[💲🏷💵]', '', text) # Remove these specific currency symbols if not wanted as raw characters
     text = re.sub(r'(\d+),(\d{3})', r'\1\2', text)
 
 
-    # Step 7: Clean and standardize phone numbers
-    text = re.sub(r'(\+251\s?\d{9}|\d{2}\s?\d{3}\s?\d{4}|\d{9})', r' <PHONE_NUMBER> ', text)
-
+    # Step 7: Phone numbers are kept. No specific replacement or removal here.
+    # Optional: Remove spaces within phone numbers if you want them contiguous.
+    # text = re.sub(r'(\d)\s+(\d)', r'\1\2', text) # Uncomment to remove spaces between digits
 
     # Step 8: Replace multiple spaces with a single space and strip leading/trailing whitespace
     text = re.sub(r'\s+', ' ', text).strip()
 
     # Step 9: Remove any remaining non-Amharic/non-English letters/digits characters
-    text = re.sub(r'[^\u1200-\u137F0-9a-zA-Z.,!?;:\s]', '', text)
+    # This regex now permits:
+    # Amharic Unicode range (\u1200-\u137F)
+    # Digits (0-9)
+    # English letters (a-zA-Z)
+    # Common punctuation (.,!?;:)
+    # Whitespace (\s)
+    # The '@' symbol (for Telegram usernames)
+    # The '+' symbol (for phone numbers like +251)
+    text = re.sub(r'[^\u1200-\u137F0-9a-zA-Z.፣፤!:\s@+።]', '', text)
     text = re.sub(r'\s+', ' ', text).strip() # Re-strip after potential new spaces from regex
 
     return text
@@ -119,8 +120,8 @@ def validate_csv(input_path):
     df = pd.read_csv(input_path, encoding='utf-8')
     
     required_columns = [
-        'channel_title', 'message_id', 'date', 'text',
-        'views', 'reactions_count', 'image_path', 'preprocessed_text'
+        'channel_title', 'message_id', 'date', 'preprocessed_text',
+        'views', 'reactions_count'
     ]
     
     if not all(col in df.columns for col in required_columns):
@@ -132,10 +133,8 @@ def validate_csv(input_path):
         logging.error("❌ NULL values found in 'message_id' column.")
         raise ValueError("NULL values in 'message_id' column.")
     
-    messages_with_original_text = df[df['text'].notnull() & (df['text'] != '')]
-    if (messages_with_original_text['preprocessed_text'].isnull()).any() or \
-       (messages_with_original_text['preprocessed_text'] == '').any():
-        logging.warning("⚠️ Some messages that originally had text resulted in empty or null preprocessed_text.")
+    if (df['preprocessed_text'].isnull()).any() or (df['preprocessed_text'] == '').any():
+        logging.warning("⚠️ Some 'preprocessed_text' entries are empty or null.")
 
     logging.info("✅ CSV validation passed successfully.")
 
@@ -173,19 +172,32 @@ if __name__ == "__main__":
             logging.error(f"❌ Input file {args.input} is empty. No data to preprocess. Please check scraper output.")
             exit()
         except Exception as e:
-            logging.error(f"❌ Error loading input CSV {args.input}: {e}")
+            logging.error(f"❌ Error loading input CSV {args.input}: {e}", exc_info=True) # Added exc_info for full traceback
             exit()
 
         # Apply preprocessing
         df['preprocessed_text'] = df['text'].fillna('').apply(preprocess_amharic)
         logging.info(f"Preprocessing applied. Sample preprocessed text:\n{df['preprocessed_text'].head()}")
         
+        # Select only the desired columns for the output CSV
+        output_columns = [
+            'channel_title', 'message_id', 'date', 'preprocessed_text',
+            'views', 'reactions_count'
+        ]
+        # Ensure all output_columns exist in df before selection
+        if not all(col in df.columns for col in output_columns):
+            missing = [col for col in output_columns if col not in df.columns]
+            logging.error(f"❌ Cannot save: Missing required columns for output: {missing}")
+            exit()
+
+        df_output = df[output_columns].copy() # Create a copy to avoid SettingWithCopyWarning
+
         # Define the output directory
         output_dir = Path(args.output).parent
         output_dir.mkdir(parents=True, exist_ok=True) # Ensure output directory exists
 
         # Save the processed DataFrame
-        df.to_csv(args.output, index=False, encoding='utf-8')
+        df_output.to_csv(args.output, index=False, encoding='utf-8')
         
-        logging.info(f"✅ Saved {len(df)} preprocessed messages to {args.output}")
+        logging.info(f"✅ Saved {len(df_output)} preprocessed messages to {args.output}")
 
