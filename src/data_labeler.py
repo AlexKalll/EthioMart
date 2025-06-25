@@ -119,10 +119,10 @@ class AmharicRuleBasedLabeler:
         # 2. By length (longer matches first - useful for specific vs. general patterns)
         # 3. By a predefined label priority (e.g., PRICE > CONTACT > PRODUCT > LOC > DELIVERY)
         label_priority = {
-            'PRICE': 5,
-            'CONTACT': 4,
-            'DELIVERY': 3,
-            'PRODUCT': 2,
+            'PRICE': 2,
+            'CONTACT': 3,
+            'DELIVERY': 4,
+            'PRODUCT': 5,
             'LOC': 1
         }
         
