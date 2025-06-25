@@ -30,3 +30,6 @@ models/
 
 # project structure creation file
 create_project_structure.py
+
+# exclude sessions D:\@kaim\EthioMart\ethiomart_session.session
+ethiomart_session.session
