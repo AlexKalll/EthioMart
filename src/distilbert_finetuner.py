@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 import logging
 from tqdm import tqdm
-import os
 from sklearn.model_selection import train_test_split
 from datasets import Dataset, Features, Value, ClassLabel, Sequence
 import torch
