@@ -222,19 +222,35 @@ python src/model_finetuner.py
 
 **Summary:** The initial performance is very low across all entity types, with F1-scores close to zero. This is primarily attributed to the small training dataset (only 40 sentences for training). Transformer models require significantly more labeled data to learn robust patterns for NER. Future improvements will focus on expanding the dataset and potentially exploring data augmentation techniques.
 
-## 🎯 4. Model Comparison & Selection (Task 4) - Next Steps
+## 🎯 4. Model Comparison & Selection (Task 4) 
 
-The next phase will involve comparing the performance of `afro-xlmr-large` with other suitable multilingual models.
+This phase involves fine-tuning additional multilingual models to compare their performance against `afro-xlmr-large` on the Amharic NER task, focusing on accuracy and efficiency.
 
-**Objective:** Fine-tune and evaluate additional models (e.g., DistilBERT, mBERT) to identify the best-performing architecture for the Amharic NER task.
-**Steps:**
+* **Objective:** Fine-tune `DistilBERT` and compare its performance with `afro-xlmr-large`.
+* **Script:** `src/distilbert_finetuner.py`
+* **Output:** The fine-tuned `DistilBERT` model and its tokenizer are saved to `models/distilbert_ner_fine_tuned/`.
+* **Process:**
+    * **Model:** `distilbert-base-multilingual-cased` was used for fine-tuning.
+    * **Training:** Similar training parameters as `afro-xlmr-large` (5 epochs, batch size 8).
+    * **Evaluation:** Precision, Recall, and F1-score were calculated on the test set.
+* **Status:** **Completed**. The `DistilBERT` model was successfully fine-tuned and saved.
 
-  * Integrate options to load and fine-tune DistilBERT or mBERT within `src/model_finetuner.py` or a new script.
-  * Run training and evaluation for each candidate model.
-  * Compare models based on precision, recall, F1-score, training speed, and resource usage.
-  * Select the optimal model for production.
+* **Model Performance Comparison (on Test Set):**
+
+    | Metric        | `afro-xlmr-large` | `DistilBERT` |
+    | :------------ | :---------------- | :----------- |
+    | Eval Loss     | 2.845             | 2.960        |
+    | Precision     | 0.010             | 0.055        |
+    | Recall        | 0.039             | 0.132        |
+    | F1-Score      | **0.016** | **0.078** |
+    | Train Runtime | ~48 minutes       | **~3.7 minutes** |
+
+    **Summary:**
+    `DistilBERT` demonstrated a notably better F1-score (0.078 vs. 0.016) and significantly faster training time (~3.7 minutes vs. ~48 minutes) compared to `afro-xlmr-large` on this dataset. Despite the improvements, overall performance for both models remains low, largely due to the very limited size of the labeled dataset. Further data augmentation or more extensive labeling is crucial for achieving practical performance.
+
+---
 
 ### Future Enhancements (Tasks 5 & 6)
 
-  * **Model Interpretability (Task 5):** Implement SHAP and LIME to explain model predictions, especially for difficult cases.
-  * **FinTech Vendor Scorecard for Micro-Lending (Task 6):** Develop an analytics engine to combine extracted NER entities with Telegram post metadata (views, timestamps) to calculate key vendor performance metrics (posting frequency, average views per post, average price point) and derive a "Lending Score."
+* **Model Interpretability (Task 5):** Implement SHAP and LIME to explain model predictions, especially for difficult cases.
+* **FinTech Vendor Scorecard for Micro-Lending (Task 6):** Develop an analytics engine to combine extracted NER entities with Telegram post metadata (views, timestamps) to calculate key vendor performance metrics (posting frequency, average views per post, average price point) and derive a "Lending Score."
