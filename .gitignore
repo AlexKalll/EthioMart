@@ -31,5 +31,5 @@ models/
 # project structure creation file
 create_project_structure.py
 
-# exclude sessions D:\@kaim\EthioMart\ethiomart_session.session
+# exclude sessions created during scraping
 ethiomart_session.session
