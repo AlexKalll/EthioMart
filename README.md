@@ -6,7 +6,7 @@ EthioMart aims to become the primary hub for Telegram-based e-commerce in Ethiop
 
 This project leverages Python, Telegram API, and data science tools to build a robust data pipeline, from scraping and preprocessing to model fine-tuning and interpretability.
 
-## 🏗️ 1. Project Setup and Data Collection (Task 1)
+## 🏗️ 1. Project Setup, Data Collection and Preprocessing
 
 **Deliverables:**
 
@@ -37,8 +37,9 @@ EthioMart/
 ├── notebooks/              # Jupyter notebooks for EDA, experimentation, and documentation
 │   ├── data_ingestion_eda.ipynb
 │   └── data_preprocessing_eda.ipynb
-├── outputs/                # Stores generated plots and visualizations
+├── outputs/                # Stores generated scorecard, plots and visualizations
 │   └── plots/
+│   └── vendor_scorecard.csv
 ├── reports/                # For interim and final project reports
 ├── tests/                  # Unit tests for various modules (e.g., preprocessor)
 │   └── test_preprocessor.py
@@ -67,7 +68,7 @@ EthioMart/
 * **scikit-learn:** For data splitting utilities.
 * **tensorboard:** For visualizing training progress.
 
-## 🚀 2. Usage and Data Pipeline Steps
+### 🚀 2. Usage and Data Pipeline Steps
 
 This section guides you through the process of setting up the project, collecting data, and performing initial analysis.
 
@@ -100,7 +101,7 @@ This section guides you through the process of setting up the project, collectin
 ### Data Pipeline Steps
 
 1.  **Run the Scraper (`src/telegram_scraper.py`):**
-    This script collects raw messages, metadata, and images from the Telegram channels specified in `config/config.py`.
+    This script collects raw messages, metadata, and images from the Telegram channels specified in `config/config.py`. The channels where we scrape the messages are `'@ZemenExpress', '@ethio_brand_collection', '@Leyueqa', '@Fashiontera', and '@marakibrand'`.
     Run from the project root:
 
     ```bash
@@ -166,7 +167,7 @@ This section guides you through the process of setting up the project, collectin
 
 This section details the steps for labeling data and fine-tuning an NER model to extract key business entities.
 
-### 3.1. Data Labeling (Task 2)
+### 3.1. Data Labeling 
 
 The cleaned text data is converted into a CoNLL-like format, suitable for Named Entity Recognition (NER) model training. This step involves applying rule-based labeling to identify entities such as product names, prices, locations, contact information, and delivery details.
 
@@ -186,12 +187,11 @@ python src/data_labeler.py
   * Converts the identified entities into the CoNLL format (Token t Tag), ensuring consistency for model training.
     **Status:** Completed. The script successfully generated the labeled `.conll` file.
 
-### 3.2. Model Fine-tuning (Task 3)
+## 🎯3. Model Fine-tuning 
 
 A pre-trained multilingual transformer model (`Davlan/afro-xlmr-large`) is fine-tuned on the labeled Amharic NER dataset to accurately extract entities from new Telegram messages.
 
-**Script:** `src/model_finetuner.py`
-**Execution:**
+**Script:** `src/model_finetuner.py`, excute in the root dir as:
 
 ```bash
 python src/model_finetuner.py
@@ -207,7 +207,7 @@ python src/model_finetuner.py
   * **Evaluation:** Calculates Precision, Recall, and F1-score on the validation and test sets to assess model performance.
     **Status:** Completed. The model was successfully fine-tuned and saved.
 
-### Initial Model Performance (`afro-xlmr-large` on Test Set):
+#### Initial Model Performance (`afro-xlmr-large` on Test Set):
 
 | Entity Type | Precision | Recall | F1-Score | Support |
 | :---------- | :-------- | :----- | :------- | :------ |
@@ -222,7 +222,7 @@ python src/model_finetuner.py
 
 **Summary:** The initial performance is very low across all entity types, with F1-scores close to zero. This is primarily attributed to the small training dataset (only 40 sentences for training). Transformer models require significantly more labeled data to learn robust patterns for NER. Future improvements will focus on expanding the dataset and potentially exploring data augmentation techniques.
 
-## 🎯 4. Model Comparison & Selection (Task 4) 
+## 🎯 4. Model Comparison & Selection 
 
 This phase involves fine-tuning additional multilingual models to compare their performance against `afro-xlmr-large` on the Amharic NER task, focusing on accuracy and efficiency.
 
@@ -250,7 +250,50 @@ This phase involves fine-tuning additional multilingual models to compare their 
 
 ---
 
-### Future Enhancements (Tasks 5 & 6)
+## 🎯5. Model Interpretability 
 
-* **Model Interpretability (Task 5):** Implement SHAP and LIME to explain model predictions, especially for difficult cases.
-* **FinTech Vendor Scorecard for Micro-Lending (Task 6):** Develop an analytics engine to combine extracted NER entities with Telegram post metadata (views, timestamps) to calculate key vendor performance metrics (posting frequency, average views per post, average price point) and derive a "Lending Score."
+This phase explores how the fine-tuned NER model makes its predictions using interpretability tools.
+
+**Objective:** Implement SHAP and conceptually outline LIME to understand model decision-making.
+**Notebook:** `notebooks/model_interpretability.ipynb`
+**Process:**
+* The best-performing model (DistilBERT) was loaded for inference.
+* SHAP (SHapley Additive exPlanations) was implemented to show word-level contributions to entity predictions for specific examples.
+* LIME (Local Interpretable Model-agnostic Explanations) was conceptually discussed due to its complexity for token-level NER.
+**Status:** Implemented (with known issues). While SHAP explanation code is present, a `TypeError` prevented full execution within the given time constraints, and the overall low model performance limits the depth of meaningful interpretation.
+
+---
+
+## 🎯6 FinTech Vendor Scorecard for Micro-Lending
+
+This task focuses on combining NER-extracted entities with Telegram post metadata to build a vendor analytics engine and generate a "Lending Score" for potential micro-lending candidates.
+
+**Objective:** Develop a script to calculate key vendor performance metrics and a composite lending score.
+**Script:** `src/vendor_scorecard_engine.py`
+**Output:** A summary table of vendor metrics and a CSV file saved to `outputs/vendor_scorecard.csv`.
+**Process:**
+* Loads `clean_telegram_data.csv`.
+* Utilizes the fine-tuned DistilBERT NER model to extract product, price, location, contact, and delivery entities from all preprocessed messages.
+* Calculates Posting Frequency, Average Views per Post, identifies the Top Performing Post (including its extracted product and price), and computes the Average Price Point for each vendor channel.
+* Derives a `Lending_Score` based on a weighted combination of Average Views per Post and Posting Frequency.
+**Status:** Completed. The vendor scorecard was successfully generated and saved.
+
+### Vendor Scorecard Sample Output:
+
+| Vendor_Channel | Posting_Frequency_per_Week | Average_Views_per_Post | Top_Product | Top_Price | Average_Price_Point_ETB | Lending_Score |
+| :---------------- | :------------------------ | :--------------------- | :---------- | :-------- | :---------------------- | :------------ |
+| Zemen Express®    | 42.424242                 | 5417.891               | None        | None      | 1.664871e+07            | 2730.157621   |
+| EthioBrand®       | 10.494753                 | 39753.976              | ##ge        | SD Size   | 1.624311e+13            | 19882.235376  |
+| ልዩ እቃ          | 41.666667                 | 26020.603              | LeM          |ዘመናዊ አዲስ በኤሌክትሪክ የሚሰራ  | 1.534902e+10            | 13031.134833  |
+| Fashion tera      | 5.359877                  | 9385.297               | 2           | ፋሽን ተራ    | 3.179614e+09            | 4695.328439   |
+| ማራኪ ცЯﾑŋの™    | 21.671827                 | 11434.001              | None        | None      | 3.293501e+08            | 5727.836413   |
+
+#### Observations & Limitations:
+
+* The `Top_Product` and `Top_Price` fields frequently appear as `None` or contain incorrect/partial extractions (e.g., `##ge`, `SD Size`, `ፋሽን ተራ`). This is a direct consequence of the low F1-scores of the underlying NER model (Task 4), which struggled with accurate entity extraction on the small labeled dataset.
+* The `Average_Price_Point_ETB` values are extremely high (e.g., in the billions/trillions). This indicates an issue with the price extraction and numeric conversion logic, likely due to the NER model misidentifying non-price numbers as prices or improper parsing of extracted price strings from the NER output.
+* The `Lending_Score` currently reflects engagement metrics more reliably than business profile metrics (product/price) due to the NER model's limitations.
+
+**Crucial Next Step for Improvement:** The most significant enhancement for the FinTech scorecard is to expand the labeled dataset for the NER model. A more accurate NER model will directly improve the quality of `Top_Product`, `Top_Price`, and `Average_Price_Point_ETB`, making the `Lending_Score` much more robust and actionable for EthioMart. Refining the price parsing logic within `vendor_scorecard_engine.py` is also necessary.
+
+
